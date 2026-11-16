@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title|default('AyamSegar') }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="csrf-token" content="{{ csrf_token() if csrf_token else '' }}">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { brand: '#ea580c', brandHover: '#c2410c' }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-50 min-h-screen flex flex-col">
+    <!-- Navbar -->
+    <nav class="bg-brand text-white shadow-md relative z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+
+                <!-- Kiri: Tombol Garis 3 & Logo -->
+                <div class="flex items-center gap-3">
+                    <!-- Tombol Hamburger -->
+                    <button id="hamburger-btn" class="p-2 rounded-md hover:bg-brandHover focus:outline-none transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+
+                    <!-- Logo -->
+                    <div class="flex-shrink-0 flex items-center">
+                        <a href="{{ url_for('main.index') }}" class="font-bold text-xl tracking-tight flex items-center gap-2">
+                            🐔 AyamSegar
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Dropdown Menu Kiri (Tersembunyi secara default) -->
+                <div id="side-menu" class="hidden absolute top-16 left-4 sm:left-6 lg:left-8 w-56 bg-white/95 backdrop-blur-md rounded-b-xl shadow-lg border border-slate-100 overflow-hidden text-slate-700 transform transition-all">
+                    <a href="#" class="px-5 py-3 hover:bg-orange-50 border-b border-slate-100 flex items-center gap-3 font-medium transition">
+                        <span class="text-xl">👤</span> Akun
+                    </a>
+                    <a href="#" class="px-5 py-3 hover:bg-orange-50 border-b border-slate-100 flex items-center gap-3 font-medium transition">
+                        <span class="text-xl">⚙️</span> Pengaturan
+                    </a>
+                    <a href="#" class="px-5 py-3 hover:bg-orange-50 flex items-center gap-3 font-medium transition">
+                        <span class="text-xl">ℹ️</span> Tentang Web
+                    </a>
+                </div>
+
+                <!-- Kanan: Menu Navigasi Kanan -->
+                <div class="flex space-x-4 items-center">
+                    <!-- Tombol Keranjang -->
+                    <a href="{{ url_for('customer.view_cart') }}" class="hover:bg-brandHover px-3 py-2 rounded-md text-sm font-medium transition flex items-center">
+                        🛒 Keranjang
+                        <span id="cart-count" class="bg-white text-brand px-2 py-0.5 rounded-full text-xs font-bold ml-2 shadow-sm">
+                            {{ session.get('cart', {}).values() | sum if session else 0 }}
+                        </span>
+                    </a>
+
+                    <!-- Menu User Autentikasi -->
+                    {% if current_user and current_user.is_authenticated %}
+                        {% if current_user.role == 'admin' %}
+                            <a href="{{ url_for('admin.dashboard') }}" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-2 rounded-md text-sm font-bold transition flex items-center shadow-sm">
+                                ⚙️ Dashboard Admin
+                            </a>
+                        {% endif %}
+                        <span class="px-3 py-2 rounded-md text-sm font-medium hidden sm:inline-block">Halo, {{ current_user.name }}</span>
+                        <a href="{{ url_for('auth.logout') }}" class="hover:bg-brandHover px-3 py-2 rounded-md text-sm font-medium transition">Keluar</a>
+                    {% else %}
+                        <a href="{{ url_for('auth.login') }}" class="hover:bg-brandHover px-3 py-2 rounded-md text-sm font-medium transition">Masuk</a>
+                        <a href="{{ url_for('auth.register') }}" class="bg-white text-brand hover:bg-slate-100 px-4 py-2 rounded-md text-sm font-bold transition shadow">Daftar</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Flash Messages -->
+    <div class="max-w-7xl mx-auto px-4 w-full mt-4">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="p-4 mb-4 rounded-lg font-medium shadow-sm {% if category == 'success' %}bg-emerald-100 text-emerald-800 border border-emerald-200{% elif category == 'error' %}bg-red-100 text-red-800 border border-red-200{% else %}bg-blue-100 text-blue-800 border border-blue-200{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Area Konten Utama -->
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Script Interaktif untuk Menu Garis 3 -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const btn = document.getElementById('hamburger-btn');
+            const menu = document.getElementById('side-menu');
+
+            // Buka/tutup menu saat tombol diklik
+            btn.addEventListener('click', function(event) {
+                menu.classList.toggle('hidden');
+                event.stopPropagation(); // Mencegah klik bocor ke background
+            });
+
+            // Tutup menu otomatis jika user mengklik area luar menu
+            document.addEventListener('click', function(event) {
+                if (!btn.contains(event.target) && !menu.contains(event.target)) {
+                    menu.classList.add('hidden');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

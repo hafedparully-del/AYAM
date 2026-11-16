@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Efek Kustom CSS untuk Kursor dan Animasi Ayam -->
+<style>
+    /* Mengubah kursor bawaan menjadi telur ayam */
+    body {
+        cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' style='font-size:24px;'><text y='24'>🥚</text></svg>") 16 16, auto;
+    }
+
+    /* Mengubah kursor menjadi telur menetas saat menyorot tombol/link */
+    a, button, [onclick] {
+        cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' style='font-size:24px;'><text y='24'>🐣</text></svg>") 16 16, pointer !important;
+    }
+
+    /* Animasi Ayam Bergoyang (Wiggle/Cluck effect) */
+    @keyframes cluck {
+        0%, 100% { transform: rotate(0deg) scale(1); }
+        25% { transform: rotate(-15deg) scale(1.2); }
+        50% { transform: rotate(15deg) scale(1.2); }
+        75% { transform: rotate(-10deg) scale(1.2); }
+    }
+
+    /* Trigger animasi pada ikon saat kartu disorot */
+    .catalog-card:hover .chicken-icon {
+        animation: cluck 0.6s ease-in-out infinite;
+    }
+
+    /* Efek melayang (floating) pada kartu */
+    .catalog-card {
+        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s;
+    }
+    .catalog-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 15px 30px -5px rgba(234, 88, 12, 0.2); /* Bayangan oranye halus */
+    }
+</style>
+
+<div class="mb-10 text-center mt-6">
+    <h1 class="text-4xl font-extrabold text-slate-800 tracking-tight">
+        Katalog <span class="text-brand">AyamSegar</span> 🐔
+    </h1>
+    <p class="text-slate-500 mt-3 text-lg max-w-2xl mx-auto">
+        Pilih potongan ayam berkualitas tinggi langsung dari peternakan. Segar, higienis, dan siap diantar ke dapur Anda!
+    </p>
+</div>
+
+<!-- Grid Katalog -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+    {% for p in products %}
+    <div class="catalog-card bg-white rounded-2xl border-2 border-transparent hover:border-orange-100 overflow-hidden flex flex-col relative group">
+
+        <!-- Label Kategori Unik -->
+        <div class="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold shadow-sm z-10
+            {% if p.category == 'Karkas' %} text-orange-600
+            {% elif p.category == 'Fillet' %} text-emerald-600
+            {% else %} text-blue-600 {% endif %}">
+            {{ p.category }}
+        </div>
+
+        <div class="p-6 flex-grow flex flex-col bg-white">
+            <h3 class="text-xl font-bold text-slate-800 mb-1 leading-tight">{{ p.name }}</h3>
+            <div class="text-2xl font-extrabold text-brand mt-2 mb-4">
+                Rp {{ "{:,.0f}".format(p.price_per_unit).replace(',', '.') }}
+                <span class="text-sm font-medium text-slate-400">/ {{ p.unit_type }}</span>
+            </div>
+
+            <div class="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between">
+                <div class="flex items-center gap-1">
+                    <span class="w-2 h-2 rounded-full {{ 'bg-emerald-500' if p.stock_available > 0 else 'bg-red-500' }} animate-pulse"></span>
+                    <span class="text-sm font-semibold {{ 'text-emerald-700' if p.stock_available > 0 else 'text-red-600' }}">
+                        Sisa {{ p.stock_available }}
+                    </span>
+                </div>
+
+                <button onclick="addToCart('{{ p.id }}')" class="bg-brand hover:bg-brandHover text-white w-10 h-10 rounded-full flex items-center justify-center text-xl font-bold transition-transform active:scale-95 shadow-md hover:shadow-lg">
+                    +
+                </button>
+            </div>
+        </div>
+
+        <div class="h-56 bg-gradient-to-br from-orange-50 to-amber-100 flex items-center justify-center relative overflow-hidden">
+            <!-- Dekorasi background melingkar -->
+            <div class="absolute w-32 h-32 bg-white rounded-full opacity-50 blur-xl"></div>
+
+            <!-- Ikon atau Gambar Ayam dengan Animasi -->
+            {% if p.image_filename %}
+               <img src="{{ url_for('static', filename='uploads/' + p.image_file) }}" alt="{{ p.name }}" class="w-full h-48 object-cover rounded-md mb-4">
+            {% else %}
+                <span class="chicken-icon text-7xl relative z-10 transition-transform duration-300">
+                    {% if p.category == 'Telur' %}🥚
+                    {% elif p.category == 'Fillet' %}🥩
+                    {% elif p.category == 'Sampingan' %}🦴
+                    {% else %}🐓{% endif %}
+                </span>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <div class="col-span-full text-center py-20 bg-slate-50 rounded-3xl border-2 border-slate-200 border-dashed">
+        <span class="text-6xl mb-4 block animate-bounce">🐣</span>
+        <h3 class="text-xl font-bold text-slate-700">Kandang Masih Kosong</h3>
+        <p class="text-slate-500 mt-2">Belum ada produk yang tersedia saat ini.</p>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Script Keranjang Belanja -->
+<script>
+function addToCart(productId) {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+    fetch("{{ url_for('customer.add_to_cart') }}", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": csrfToken
+        },
+        body: JSON.stringify({ product_id: productId })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            document.getElementById('cart-count').innerText = data.total;
+
+            // Efek interaktif kecil saat sukses tambah ke keranjang
+            const cartNav = document.getElementById('cart-count');
+            cartNav.classList.add('animate-bounce', 'bg-green-500', 'text-white');
+            setTimeout(() => {
+                cartNav.classList.remove('animate-bounce', 'bg-green-500', 'text-white');
+            }, 1000);
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+</script>
+{% endblock %}
